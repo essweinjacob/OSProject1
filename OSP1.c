@@ -17,6 +17,11 @@
 #include <stdio.h>	// Standard C libary
 
 void main(int argc, char* argv[]){
+	// Set up default operation variables
+	bool followSymLink = false;	// By default, this should not follow symbolic links
+	
+int indentSpaces = 4;		// Default, indent by space
+		
 	// Use getopts to setup receiving command line arguments
 	/* getopts prototype is (int argc, char * const argv[], const char *optstring)
 	 aka getopts(number of command line 'strings', the 'strings', the options to
@@ -28,6 +33,20 @@ void main(int argc, char* argv[]){
 		switch(option){
 			// h - Print a help message and exit.
 			case 'h':
+				printf("This program is used to traverse a specified directory using breadth-first order.\n");
+				printf("-h: Prints out a help message, displaying what each option does, and exits program.\n");
+				printf("-In: Changes indentation for each 'level' of the directory. By default set at 4.\n");
+				printf("-L: Will change setting to follow symbolic links. By default this program wont.\n");
+				printf("-t: Prints information of file type.\n");
+				printf("-p: Prints permission bits as rwxrwxrwx.\n");
+				printf("-i: Prints the number of links to file in inode table.\n");
+				printf("-u: Prints the UID associated with the file.\n");
+				printf("-g: Prints the GID asscoiated witht he file.\n");
+				printf("-s: Prints the size of the file.\n");
+				printf("-d: Show the name of last modification.\n");
+				printf("-l: Will be used to print information on the file as if the options 'tpiugs' are all specified.\n");
+				// Once all option descriptions have been displayed, exit program.
+				return EXIT_SUCCESS;
 			// In - indented by n spaces.
 			case 'I':
 			// L - Follow symbolic links, if any. Default will be to not follow any symbolic links.
