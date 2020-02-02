@@ -95,9 +95,9 @@ int main(int argc, char* argv[]){
 				break;
 			// Default case
 			default:
-				break;
+				fprintf(stderr, "%s: Invalid option. Please use '-h' for reference of available options.\n", argv[0]);
+				return EXIT_FAILURE;
 		}
 	}
-	
-	// Search directory
+	// Search directory	
 }
