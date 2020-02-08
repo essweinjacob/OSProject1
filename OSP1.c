@@ -19,6 +19,13 @@
 #include <string.h>	// Libary used for string operations (i.e strcat())
 #include <stdbool.h> 	// So that we can use boolean operations
 #include <getopt.h>	// Was running intp an error with 'optarg' not working without this library for some reason
+#include <dirent.h>	// For directories
+#include <sys/stat.h>	// File information
+#include <errno.h>
+
+int enQueue(char queue[20][80], int *rear, char data[80]);
+int deQueue(char queue[20][80], int *front, int *rear);
+void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *options);
 
 int main(int argc, char* argv[]){
 	// Set up default operation variables
@@ -99,5 +106,91 @@ int main(int argc, char* argv[]){
 				return EXIT_FAILURE;
 		}
 	}
-	// Search directory	
+	
+	// Set up for searches, we will want the project to run on queues(FIFO) as they are similar to breadth first order
+	// Variables for queue
+	char *parentDir, *targetDir, currentDir[2]=".";
+	int front = -1;		// -1 as there are not elements in array initally
+	int rear = -1;	
+	char dirQueue[20][80];	// Array of directories
+	// If no directory is given
+	if(argv[optind] == NULL){
+		char defDir[4096];		// Default directory is the directory that the file is currently in
+		getcwd(defDir, sizeof(defDir));
+		parentDir = defDir;
+		targetDir = currentDir;
+		enQueue(dirQueue, &rear, parentDir);
+	        breadthFirst(dirQueue[rear], dirQueue, &front, &rear,  0, optList);
+	}
+	// If user gives a directory
+	else{
+		enQueue(dirQueue, &rear, argv[optind]);		// Last element in the command arguments will be the directory so we add it to the queue
+		breadthFirst(dirQueue[rear], dirQueue, &front, &rear, 0, optList);
+	}
+
+	return 0;
+}
+
+/*============================================================================================================================
+ * enQueue()
+ * This function will put elements/strings/directories into a queue
+ * ========================================================================================================================*/
+int enQueue(char queue[20][80],  int *rear, char data[80]){
+	if(*rear == 20-1)	// If the queue is full
+		return(-1);
+	else{
+		*rear = *rear + 1;	// Change the rear location
+		strcpy(queue[*rear], data);	// Copy data into queue
+		return(1);
+	}
+}
+
+/*============================================================================================================================
+ * deQueue()
+ * This function will remove items from the queue
+ * ==========================================================================================================================*/
+int deQueue(char queue[20][80], int *front, int *rear){
+	if(*front == *rear){		// If the the queue is empty
+		return(-1);
+	}
+	else{
+		(*front)++;
+		return(1);
+	}
+}
+/*============================================================================================================================
+ * breadthFirst()
+ * This function will search directories recursively in breadth first order
+ *===========================================================================================================================*/
+void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *optList){
+	DIR *dp;	// Directory stream type
+	struct dirent *entry;	// Directory traversing
+	struct stat fileInfo;	// File information
+	
+	int spaces = depth * 4;
+	if((dp = opendir(dir)) == NULL){
+		fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
+	}
+
+	chdir(dir);
+	char cwd[4096];
+	getcwd(cwd, sizeof(cwd));
+	printf("%*sNow scanning: %s\n",spaces, "",  dir);
+	while((entry = readdir(dp)) != NULL){
+		stat(entry->d_name, &fileInfo);
+		if(strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0 || strcmp(".git", entry->d_name) == 0){
+			continue;
+		}
+		if(S_ISREG(fileInfo.st_mode)){
+			// Stuff here
+		}else if(S_ISDIR(fileInfo.st_mode)){
+			enQueue(dirQueue, rear, entry->d_name);	
+		}
+		printf("%*s%s\n", spaces, "", entry->d_name);
+	}
+	deQueue(dirQueue, front, rear);
+	if(*front != *rear){
+		breadthFirst(dirQueue[*rear], dirQueue, front, rear, depth + 1 , optList);
+	}
+	closedir(dp);
 }
