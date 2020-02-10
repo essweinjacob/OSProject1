@@ -127,8 +127,6 @@ int main(int argc, char* argv[]){
 	}
 	// If user gives a directory
 	else{
-		printf("2");
-		enQueue(dirQueue, &front, &rear, argv[optind]);		// Last element in the command arguments will be the directory so we add it to the queue
 		breadthFirst(dirQueue[rear], dirQueue, &front, &rear, 0, optList);
 	}
 
@@ -188,7 +186,8 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 	
 
 	if((dp = opendir(dir)) == NULL){
-                fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
+                //fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
+                perror("opendir() ERROR, DIRECTORY DOESN'T EXIST");
                 return;
         }
 		
