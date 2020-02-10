@@ -21,15 +21,14 @@
 #include <getopt.h>	// Was running intp an error with 'optarg' not working without this library for some reason
 #include <dirent.h>	// For directories
 #include <sys/stat.h>	// File information
-#include <errno.h>
 #include <grp.h>	// For GID
 #include <pwd.h>	// FPR UID
-#include <time.h>
+#include <time.h>	// For time formatting
 
 void enQueue(char queue[20][80], int *front, int *rear, char data[80]);
 void deQueue(char queue[20][80], int *front, int *rear);
 char *formatDate(char *emptyDate, size_t size, time_t val);
-void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *options);
+void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear, char *options);
 
 int main(int argc, char* argv[]){
 	// Set up default operation variables
@@ -123,11 +122,11 @@ int main(int argc, char* argv[]){
 		getcwd(defDir, sizeof(defDir));
 		parentDir = defDir;
 		enQueue(dirQueue, &front, &rear, parentDir);
-	        breadthFirst(dirQueue[rear], dirQueue, &front, &rear,  0, optList);
+	        breadthFirst(dirQueue[rear], dirQueue, &front, &rear, optList);
 	}
 	// If user gives a directory
 	else{
-		breadthFirst(dirQueue[rear], dirQueue, &front, &rear, 0, optList);
+		breadthFirst(dirQueue[rear], dirQueue, &front, &rear, optList);
 	}
 
 	return 0;
@@ -177,16 +176,12 @@ char *formatDate(char *emptyDate, size_t size, time_t val){
  * breadthFirst()
  * This function will search directories recursively in breadth first order
  *===========================================================================================================================*/
-void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *optList){
+void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear, char *optList){
 	DIR *dp;	// Directory stream type
 	struct dirent *entry;	// Directory traversing
 	struct stat fileInfo;	// File information
-	
-	int spaces = depth * 4;	// Spacing for the identation depth
-	
 
 	if((dp = opendir(dir)) == NULL){
-                //fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
                 perror("opendir() ERROR, DIRECTORY DOESN'T EXIST");
                 return;
         }
@@ -195,7 +190,7 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 	char cwd[4096] = ".";
 	getcwd(cwd, sizeof(cwd));
 
-	printf("%*sNow scanning: %s\n",spaces, "",  cwd);
+	printf("Now scanning: %s\n", cwd);
 	while((entry = readdir(dp)) != NULL){
 		stat(entry->d_name, &fileInfo);
 		// Ignore certain files
@@ -213,7 +208,7 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 			enQueue(dirQueue, front, rear, peekDir);		// Add it to queue
 			chdir("..");
 		}
-		printf("%*s%s   ", spaces, "", entry->d_name);
+		printf("%10s   ", entry->d_name);
 		// Go through options for files required things
 		char permissionBits[11] = "";	// Permission bits
 		struct passwd *uid;		// UID
@@ -248,21 +243,21 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 					(fileInfo.st_mode & S_IWOTH) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
 					(fileInfo.st_mode & S_IXOTH) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
 					
-					printf("%s   ",permissionBits);
+					printf("%15s   ",permissionBits);
 					break;
 				case 'u':
 					uid = getpwuid(fileInfo.st_uid);
 					if(uid != NULL)
-						printf("%s   ", uid->pw_name);
+						printf("%10s   ", uid->pw_name);
 					else
-						printf("%s   ", fileInfo.st_uid);
+						printf("%10s   ", fileInfo.st_uid);
 					break;
 				case 'g':
 					gid = getgrgid(fileInfo.st_gid);
 					if(gid != NULL)
-                                                printf("%s   ", gid->gr_name);
+                                                printf("%10s   ", gid->gr_name);
                                         else
-                                                printf("%s   ", fileInfo.st_gid);
+                                                printf("%10s   ", fileInfo.st_gid);
 
 					break;
 				case 's':
@@ -277,22 +272,27 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 						byteSuffix = "K";
 					}else
 						byteSuffix = "B";
+
 					printf("%d%s   ", fileSize, byteSuffix);
 					break;
 				case 'd':
-					printf("%s   ",formatDate(date, sizeof(date), fileInfo.st_mtime));
+					printf("%15s   ",formatDate(date, sizeof(date), fileInfo.st_mtime));
 					break;
 				case 'i':
-					printf("%d   ",(unsigned int)fileInfo.st_nlink);
+					printf("%3d   ",(unsigned int)fileInfo.st_nlink);
 					break;
 				case 't':
+					// Is a file
 					if(S_ISREG(fileInfo.st_mode))
 						fileType = "file";
+					// Is a directory
 					else if(S_ISDIR(fileInfo.st_mode))
 						fileType = "directory";
+					// Is a symbolic link
 					else if(S_ISLNK(fileInfo.st_mode))
 						fileType = "symlink";
-					printf("%s   ", fileType);
+
+					printf("%13s   ", fileType);
 					break;
 				case 'l':
 					// For -t
@@ -333,10 +333,10 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 					// For -g
 					char *gidStr;
 					gid = getgrgid(fileInfo.st_gid);
-                                        if(gid != NULL)
-                                                gidStr = gid->gr_name;
-                                        else
-                                                gidStr = fileInfo.st_gid;
+					if(gid != NULL)
+						gidStr = gid->gr_name;
+					else
+                                        	gidStr = fileInfo.st_gid;
 					
 					// For -s
 					if(fileSize >= 1000000000){
@@ -351,7 +351,7 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
                                         }else
                                                 byteSuffix = "B";
 	
-					printf("%s   %s   %d   %s   %s   %d%s\n", fileType, permissionBits, (unsigned int)fileInfo.st_nlink, uidStr, gidStr, fileSize, byteSuffix);
+					printf("%11s   %13s   %4d   %10s   %10s   %d%s\n", fileType, permissionBits, (unsigned int)fileInfo.st_nlink, uidStr, gidStr, fileSize, byteSuffix);
 					break;
 				case 'L':
 					enQueue(dirQueue, front, rear, entry->d_name);
@@ -360,9 +360,10 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 		}
 		printf("\n");
 	}
+	printf("\n");
 	if(*front != *rear){		// Continue until queue is 'clear'
 		deQueue(dirQueue, front, rear);	
-		breadthFirst(dirQueue[*front], dirQueue, front, rear, depth + 1 , optList);
+		breadthFirst(dirQueue[*front], dirQueue, front, rear, optList);
 	}
 	closedir(dp);	// Clear directory stream
 }
