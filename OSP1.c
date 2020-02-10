@@ -22,9 +22,13 @@
 #include <dirent.h>	// For directories
 #include <sys/stat.h>	// File information
 #include <errno.h>
+#include <grp.h>	// For GID
+#include <pwd.h>	// FPR UID
+#include <time.h>
 
 int enQueue(char queue[20][80], int *rear, char data[80]);
 int deQueue(char queue[20][80], int *front, int *rear);
+char *formatDate(char *emptyDate, size_t size, time_t val);
 void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *options);
 
 int main(int argc, char* argv[]){
@@ -159,6 +163,14 @@ int deQueue(char queue[20][80], int *front, int *rear){
 	}
 }
 /*============================================================================================================================
+formatDate
+This function will take in the st_mtime and format the date
+============================================================================================================================*/
+char *formatDate(char *emptyDate, size_t size, time_t val){
+	strftime(emptyDate, size, "%b %d, %Y", localtime(&val));
+	return emptyDate;
+}
+/*============================================================================================================================
  * breadthFirst()
  * This function will search directories recursively in breadth first order
  *===========================================================================================================================*/
@@ -167,30 +179,179 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 	struct dirent *entry;	// Directory traversing
 	struct stat fileInfo;	// File information
 	
-	int spaces = depth * 4;
+	int spaces = depth * 4;	// Spacing for the identation depth
 	if((dp = opendir(dir)) == NULL){
 		fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
+		return;
 	}
 
-	chdir(dir);
+	chdir(dir);		// Change directories
 	char cwd[4096];
 	getcwd(cwd, sizeof(cwd));
 	printf("%*sNow scanning: %s\n",spaces, "",  dir);
 	while((entry = readdir(dp)) != NULL){
 		stat(entry->d_name, &fileInfo);
+		// Ignore certain files
 		if(strcmp(".", entry->d_name) == 0 || strcmp("..", entry->d_name) == 0 || strcmp(".git", entry->d_name) == 0){
 			continue;
 		}
+		// If the item is a file
 		if(S_ISREG(fileInfo.st_mode)){
 			// Stuff here
+		// If the item is a directory
 		}else if(S_ISDIR(fileInfo.st_mode)){
-			enQueue(dirQueue, rear, entry->d_name);	
+			enQueue(dirQueue, rear, entry->d_name);		// Add it to queue
 		}
-		printf("%*s%s\n", spaces, "", entry->d_name);
+		printf("%*s%s   ", spaces, "", entry->d_name);
+		// Go through options for files required things
+		char permissionBits[11] = "";	// Permission bits
+		struct passwd *uid;		// UID
+		struct group *gid;		// GID
+		long long int fileSize = (long long)fileInfo.st_size;
+		char *byteSuffix = "";
+		char date[20];
+		char *fileType = "";
+		int i;
+		for(i = 0; i < strlen(optList); i++){
+			switch(optList[i]){
+				// Permissions on file
+				case 'p':
+					// Check what type of item it is and append correct bit to permissionBits
+					if(S_ISREG(fileInfo.st_mode))
+						strcat(permissionBits, "-");
+					else if(S_ISDIR(fileInfo.st_mode))
+						strcat(permissionBits, "d");
+					else if(S_ISLNK(fileInfo.st_mode))
+						strcat(permissionBits, "l");
+					// Use teranry statements for easy to read code and use few lines/if statments
+					// Check bits and append bits for user group, and other, read write and execute permissions
+					(fileInfo.st_mode & S_IRUSR) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");	
+					(fileInfo.st_mode & S_IWUSR) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+					(fileInfo.st_mode & S_IXUSR) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+
+					(fileInfo.st_mode & S_IRGRP) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");
+					(fileInfo.st_mode & S_IWGRP) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+					(fileInfo.st_mode & S_IXGRP) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+
+					(fileInfo.st_mode & S_IROTH) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");
+					(fileInfo.st_mode & S_IWOTH) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+					(fileInfo.st_mode & S_IXOTH) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+					
+					printf("%s   ",permissionBits);
+					break;
+				case 'u':
+					uid = getpwuid(fileInfo.st_uid);
+					if(uid != NULL)
+						printf("%s   ", uid->pw_name);
+					else
+						printf("%s   ", fileInfo.st_uid);
+					break;
+				case 'g':
+					gid = getgrgid(fileInfo.st_gid);
+					if(gid != NULL)
+                                                printf("%s   ", gid->gr_name);
+                                        else
+                                                printf("%s   ", fileInfo.st_gid);
+
+					break;
+				case 's':
+					if(fileSize >= 1000000000){
+						fileSize = (long long)(fileSize/1000000000);
+						byteSuffix = "G";
+					}else if(fileSize >= 1000000){
+						fileSize = (long long)(fileSize/1000000);
+						byteSuffix = "M";
+					}else if(fileSize >= 1000){
+						fileSize = (long long)(fileSize/1000);
+						byteSuffix = "K";
+					}else
+						byteSuffix = "B";
+					printf("%d%s   ", fileSize, byteSuffix);
+					break;
+				case 'd':
+					printf("%s   ",formatDate(date, sizeof(date), fileInfo.st_mtime));
+					break;
+				case 'i':
+					printf("%d   ",(unsigned int)fileInfo.st_nlink);
+					break;
+				case 't':
+					if(S_ISREG(fileInfo.st_mode))
+						fileType = "file";
+					else if(S_ISDIR(fileInfo.st_mode))
+						fileType = "directory";
+					else if(S_ISLNK(fileInfo.st_mode))
+						fileType = "symlink";
+					printf("%s   ", fileType);
+					break;
+				case 'l':
+					// For -t
+					if(S_ISREG(fileInfo.st_mode))
+                                                fileType = "file";
+                                        else if(S_ISDIR(fileInfo.st_mode))
+                                                fileType = "directory";
+                                        else if(S_ISLNK(fileInfo.st_mode))
+                                                fileType = "symlink";
+                                        // For -p
+                                       	if(S_ISREG(fileInfo.st_mode))
+						strcat(permissionBits, "-");
+					else if(S_ISDIR(fileInfo.st_mode))
+						strcat(permissionBits, "d");
+					else if(S_ISLNK(fileInfo.st_mode))
+						strcat(permissionBits, "l");
+
+					(fileInfo.st_mode & S_IRUSR) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IWUSR) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IXUSR) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+
+                                        (fileInfo.st_mode & S_IRGRP) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IWGRP) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IXGRP) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+
+                                        (fileInfo.st_mode & S_IROTH) ? strcat(permissionBits, "r") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IWOTH) ? strcat(permissionBits, "w") : strcat(permissionBits, "-");
+                                        (fileInfo.st_mode & S_IXOTH) ? strcat(permissionBits, "x") : strcat(permissionBits, "-");
+					
+					// For -u
+					char *uidStr;
+					uid = getpwuid(fileInfo.st_uid);
+                                        if(uid != NULL)
+                                                uidStr = uid->pw_name;
+                                        else
+                                                uidStr = fileInfo.st_uid;
+					
+					// For -g
+					char *gidStr;
+					gid = getgrgid(fileInfo.st_gid);
+                                        if(gid != NULL)
+                                                gidStr = gid->gr_name;
+                                        else
+                                                gidStr = fileInfo.st_gid;
+					
+					// For -s
+					if(fileSize >= 1000000000){
+                                                fileSize = (long long)(fileSize/1000000000);
+                                                byteSuffix = "G";
+                                        }else if(fileSize >= 1000000){
+                                                fileSize = (long long)(fileSize/1000000);
+                                                byteSuffix = "M";
+                                        }else if(fileSize >= 1000){
+                                                fileSize = (long long)(fileSize/1000);
+                                                byteSuffix = "K";
+                                        }else
+                                                byteSuffix = "B";
+	
+					printf("%s   %s   %d   %s   %s   %d%s\n", fileType, permissionBits, (unsigned int)fileInfo.st_nlink, uidStr, gidStr, fileSize, byteSuffix);
+					break;
+				case 'L':
+					enQueue(dirQueue, rear, entry->d_name);
+					break;
+			}
+		}
+		printf("\n");
 	}
 	deQueue(dirQueue, front, rear);
-	if(*front != *rear){
+	if(*front != *rear){		// Continue until queue is 'clear'
 		breadthFirst(dirQueue[*rear], dirQueue, front, rear, depth + 1 , optList);
 	}
-	closedir(dp);
+	closedir(dp);	// Clear directory stream
 }
