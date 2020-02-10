@@ -26,8 +26,8 @@
 #include <pwd.h>	// FPR UID
 #include <time.h>
 
-int enQueue(char queue[20][80], int *rear, char data[80]);
-int deQueue(char queue[20][80], int *front, int *rear);
+void enQueue(char queue[20][80], int *front, int *rear, char data[80]);
+void deQueue(char queue[20][80], int *front, int *rear);
 char *formatDate(char *emptyDate, size_t size, time_t val);
 void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int depth, char *options);
 
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]){
 	
 	// Set up for searches, we will want the project to run on queues(FIFO) as they are similar to breadth first order
 	// Variables for queue
-	char *parentDir, *targetDir, currentDir[2]=".";
+	char *parentDir, currentDir[2]=".";
 	int front = -1;		// -1 as there are not elements in array initally
 	int rear = -1;	
 	char dirQueue[20][80];	// Array of directories
@@ -122,13 +122,13 @@ int main(int argc, char* argv[]){
 		char defDir[4096];		// Default directory is the directory that the file is currently in
 		getcwd(defDir, sizeof(defDir));
 		parentDir = defDir;
-		targetDir = currentDir;
-		enQueue(dirQueue, &rear, parentDir);
+		enQueue(dirQueue, &front, &rear, parentDir);
 	        breadthFirst(dirQueue[rear], dirQueue, &front, &rear,  0, optList);
 	}
 	// If user gives a directory
 	else{
-		enQueue(dirQueue, &rear, argv[optind]);		// Last element in the command arguments will be the directory so we add it to the queue
+		printf("2");
+		enQueue(dirQueue, &front, &rear, argv[optind]);		// Last element in the command arguments will be the directory so we add it to the queue
 		breadthFirst(dirQueue[rear], dirQueue, &front, &rear, 0, optList);
 	}
 
@@ -139,13 +139,17 @@ int main(int argc, char* argv[]){
  * enQueue()
  * This function will put elements/strings/directories into a queue
  * ========================================================================================================================*/
-int enQueue(char queue[20][80],  int *rear, char data[80]){
-	if(*rear == 20-1)	// If the queue is full
-		return(-1);
-	else{
+void enQueue(char queue[20][80], int *front, int *rear, char file[80]){
+	if(*rear == 20-1){	// If the queue is full
+		printf("QUEUE IS FULL\n");
+		return;
+	}else{
+		if(*front == -1)
+			*front = 0;
 		*rear = *rear + 1;	// Change the rear location
-		strcpy(queue[*rear], data);	// Copy data into queue
-		return(1);
+		strcpy(queue[*rear], file);	// Copy data into queue
+		//printf("%s at element %d in queue has been added \n", queue[*rear], *rear);
+		return;
 	}
 }
 
@@ -153,13 +157,14 @@ int enQueue(char queue[20][80],  int *rear, char data[80]){
  * deQueue()
  * This function will remove items from the queue
  * ==========================================================================================================================*/
-int deQueue(char queue[20][80], int *front, int *rear){
+void deQueue(char queue[20][80], int *front, int *rear){
 	if(*front == *rear){		// If the the queue is empty
-		return(-1);
-	}
-	else{
+		printf("THE QUEUE IS EMPTY\n");
+		return;
+	}else{ 
+		//printf("%s, at element %d, has been removed\n", queue[*front], *front);
 		(*front)++;
-		return(1);
+		return;
 	}
 }
 /*============================================================================================================================
@@ -180,15 +185,18 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 	struct stat fileInfo;	// File information
 	
 	int spaces = depth * 4;	// Spacing for the identation depth
-	if((dp = opendir(dir)) == NULL){
-		fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
-		return;
-	}
+	
 
-	chdir(dir);		// Change directories
-	char cwd[4096];
+	if((dp = opendir(dir)) == NULL){
+                fprintf(stderr, "%*sERROR: %s\n", spaces, "", strerror(errno));
+                return;
+        }
+		
+	chdir(dir);
+	char cwd[4096] = ".";
 	getcwd(cwd, sizeof(cwd));
-	printf("%*sNow scanning: %s\n",spaces, "",  dir);
+
+	printf("%*sNow scanning: %s\n",spaces, "",  cwd);
 	while((entry = readdir(dp)) != NULL){
 		stat(entry->d_name, &fileInfo);
 		// Ignore certain files
@@ -200,7 +208,11 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 			// Stuff here
 		// If the item is a directory
 		}else if(S_ISDIR(fileInfo.st_mode)){
-			enQueue(dirQueue, rear, entry->d_name);		// Add it to queue
+			chdir(entry->d_name);
+			char peekDir[4096] = ".";
+			getcwd(peekDir, sizeof(peekDir));
+			enQueue(dirQueue, front, rear, peekDir);		// Add it to queue
+			chdir("..");
 		}
 		printf("%*s%s   ", spaces, "", entry->d_name);
 		// Go through options for files required things
@@ -343,15 +355,15 @@ void breadthFirst(char *dir, char dirQueue[20][80],  int *front, int *rear,  int
 					printf("%s   %s   %d   %s   %s   %d%s\n", fileType, permissionBits, (unsigned int)fileInfo.st_nlink, uidStr, gidStr, fileSize, byteSuffix);
 					break;
 				case 'L':
-					enQueue(dirQueue, rear, entry->d_name);
+					enQueue(dirQueue, front, rear, entry->d_name);
 					break;
 			}
 		}
 		printf("\n");
 	}
-	deQueue(dirQueue, front, rear);
 	if(*front != *rear){		// Continue until queue is 'clear'
-		breadthFirst(dirQueue[*rear], dirQueue, front, rear, depth + 1 , optList);
+		deQueue(dirQueue, front, rear);	
+		breadthFirst(dirQueue[*front], dirQueue, front, rear, depth + 1 , optList);
 	}
 	closedir(dp);	// Clear directory stream
 }
