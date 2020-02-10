@@ -1,0 +1,72 @@
+commit 3961ecc140b01da54c9d5526168dddbaf9fa2405
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Mon Feb 10 11:01:10 2020 -0600
+
+    Making sure everything is commited
+
+commit a1cf2c92dd0349c8288647ce4d2b1d493dcf85c8
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Mon Feb 10 08:38:31 2020 -0600
+
+    Fixed bug causing breathFirst so look at last element instead of first element, also fixed issue where it would try to search for a directory where a directory didnt exist, using full path of directories now
+
+commit 34eddb2bc114418ddc290740683324fee1e14044
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 9 21:00:49 2020 -0600
+
+    Added all options, fixed bug with scanning second directory twice causing seg fault. Still need to standarize spaceing so it looks pretty.
+
+commit b7622db9b791fa29725e765466f9451df1136c4f
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sat Feb 8 16:35:54 2020 -0600
+
+    Added Queue(FIFO) System and breadthFirst function working correctly
+
+commit b6c607236f2c9c870f3b8ba6ac1b52a29d698e67
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 14:33:01 2020 -0600
+
+    Added error if invaild option is given.
+
+commit 7e61ccc0e5a3fd5035d9c763c08ee498b1a631af
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 14:20:30 2020 -0600
+
+    Add functionality for adding the options to an array as well as changing indentation of spaces and if symbolic links should be followed or not
+
+commit 42e1c894243ececa515892346581d92c190e6ccc
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 13:52:35 2020 -0600
+
+    Added functionality for h command line option
+
+commit d938484918f8ecc0a56bf9ae6c451324f9114f41
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 13:35:51 2020 -0600
+
+    Added to project file. Added framework for switch statement
+
+commit f836ba31f0dcd9c87dfc01458e1a164d602c1c26
+Merge: b51557c 0ab61c7
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 13:03:49 2020 -0600
+
+    Merge branch 'master' of https://github.com/essweinjacob/OSProject1
+
+commit b51557cdc91dfaca7cdafff6d98b1b26e1879ade
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 13:03:05 2020 -0600
+
+    First real commit. Added fundatmental setup for project to work
+
+commit 0ab61c76db559205515055a17efaaef5f3e0bd29
+Author: essweinjacob <49918644+essweinjacob@users.noreply.github.com>
+Date:   Sun Feb 2 12:45:37 2020 -0600
+
+    Delete test.txt
+
+commit 2551169cb8909be0280711f9ca3f1ffaccd44b2f
+Author: Jacob Esswein <essweinjacob@gmail.com>
+Date:   Sun Feb 2 12:43:13 2020 -0600
+
+    first commit/README added
